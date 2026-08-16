@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 // 1. Configuración de Variables de Entorno
 // ==========================================
 //const token = process.env.TELEGRAM_BOT_TOKEN || 'YOUR_TELEGRAM_BOT_TOKEN'; // Opcional, pero no recomendado en prod sin .env
-const token = new Bot(Deno.env.get("BOT_TOKEN")!); // <-- put your bot token between the ""
+const token = Deno.env.get("BOT_TOKEN"); // <-- put your bot token between the ""
 const port = process.env.PORT || 3000;
 // WEBAPP_URL es la URL pública donde está alojada tu app (ej. https://tu-ngrok.ngrok-free.app o en producción).
 // Si no se define, se usará una URL temporal por consola.
