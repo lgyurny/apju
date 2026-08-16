@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Telegram Mini App Example</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Include Telegram Web App Script -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to Mini App!</h1>
+        <div class="user-info" id="user-info">
+            Loading user info...
+        </div>
+
+        <div class="counter-section">
+            <p>Counter: <span id="counter-value">0</span></p>
+            <button id="increment-btn" class="btn">Increment</button>
+            <button id="decrement-btn" class="btn">Decrement</button>
+        </div>
+
+        <div class="theme-info">
+            <p>Current theme: <span id="theme-color">N/A</span></p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+/*
+  Utilizando variables CSS proporcionadas por el tema de Telegram
+  cuando la app se ejecuta dentro de Telegram.
+  Valores por defecto (fallbacks) por si se abre fuera de Telegram.
+*/
+
+:root {
+    --bg-color: var(--tg-theme-bg-color, #ffffff);
+    --text-color: var(--tg-theme-text-color, #000000);
+    --button-color: var(--tg-theme-button-color, #3390ec);
+    --button-text-color: var(--tg-theme-button-text-color, #ffffff);
+    --secondary-bg-color: var(--tg-theme-secondary-bg-color, #f1f1f1);
+    --hint-color: var(--tg-theme-hint-color, #999999);
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+.container {
+    width: 100%;
+    max-width: 400px;
+    padding: 20px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+h1 {
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.user-info {
+    background-color: var(--secondary-bg-color);
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-size: 16px;
+}
+
+.counter-section {
+    margin-bottom: 30px;
+}
+
+.counter-section p {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.btn {
+    background-color: var(--button-color);
+    color: var(--button-text-color);
+    border: none;
+    padding: 10px 20px;
+    margin: 5px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn:active {
+    opacity: 0.7;
+}
+
+.theme-info {
+    font-size: 14px;
+    color: var(--hint-color);
+    margin-top: 20px;
+}
