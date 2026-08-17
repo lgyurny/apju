@@ -47,7 +47,22 @@
             document.getElementById('user-info').innerText = "Usuario no detectado.";
         }
 
-        // Lógica de compra asíncrona
+        // 1. Interacción con Express (GET)
+        document.getElementById('fetchDataBtn').addEventListener('click', async () => {
+            try {
+                const res = await fetch('/api/config');
+                const data = await res.json();
+                document.getElementById('api-response').innerHTML = `
+                    <strong>Respuesta del Backend:</strong><br>
+                    Versión: ${data.version}<br>
+                    Características: ${data.features.join(', ')}
+                `;
+            } catch (error) {
+                document.getElementById('api-response').innerText = "Error al obtener datos.";
+            }
+        });
+
+        // 2. Interacción con GrammY (Envío de datos al Bot)
         document.getElementById('buyBtn').addEventListener('click', async () => {
             const btn = document.getElementById('buyBtn');
             const statusText = document.getElementById('status-text');
