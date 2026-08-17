@@ -44,7 +44,7 @@ const bot = new Bot(Deno.env.get("BOT_TOKEN"));
 bot.command('start', async (ctx) => {
     const keyboard = new InlineKeyboard().webApp(
         "🚀 Abrir Mini App",
-        process.env.WEBAPP_URL
+        Deno.env.get("WEBAPP_URL")
     );
     await ctx.reply(
         "¡Bienvenido! Soy un bot avanzado con una Mini App integrada.\nUsa /help para ver mis comandos.",
@@ -68,7 +68,7 @@ bot.command('help', async (ctx) => {
 bot.command('menu', async (ctx) => {
     const keyboard = new InlineKeyboard().webApp(
         "🛒 Ver Catálogo de Productos",
-        `${process.env.WEBAPP_URL}?view=catalog`
+        `${Deno.env.get("WEBAPP_URL")}?view=catalog`
     );
     await ctx.reply("Selecciona una opción del menú:", { reply_markup: keyboard });
 });
@@ -98,7 +98,7 @@ bot.api.setChatMenuButton({
     menu_button: {
         type: "web_app",
         text: "Abrir App",
-        web_app: { url: process.env.WEBAPP_URL }
+        web_app: { url: Deno.env.get("WEBAPP_URL") }
     }
 }).catch(err => console.error("Error configurando menú:", err));
 
