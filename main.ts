@@ -47,7 +47,7 @@ if (token === 'YOUR_TELEGRAM_BOT_TOKEN' || !token) {
     console.warn("El bot de Telegram no se iniciará, pero el servidor frontend está en funcionamiento.");
 } else {
     // Inicializar el bot en modo polling
-    const bot = new TelegramBot(token, { polling: true });
+    const bot = new Bot(token, { polling: true });
 
     console.log("🤖 Bot de Telegram iniciado en modo polling.");
 
