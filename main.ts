@@ -36,6 +36,31 @@ app.post('/api/submit', (req, res) => {
     res.json({ success: true, message: `Gracias por tu feedback, ${name}!` });
 });
 
+// NUEVO ENDPOINT: Recibe datos de la app y notifica al bot
+app.post('/api/buy', async (req, res) => {
+    const { userId, item, price } = req.body;
+
+    if (!userId) {
+        return res.status(400).json({ success: false, message: "Falta el ID del usuario" });
+    }
+
+    try {
+        // Usamos la instancia del bot de GrammY para enviar un mensaje directo al usuario
+        await bot.api.sendMessage(
+            userId,
+            `✅ ¡Compra procesada con éxito!\n\n📦 Producto: *${item}*\n💰 Precio: $${price}\n\nGracias por tu compra.`,
+            { parse_mode: "Markdown" }
+        );
+
+        // Respondemos a la Mini App para que muestre un mensaje de éxito
+        res.json({ success: true, message: "Compra realizada y bot notificado." });
+    } catch (error) {
+        console.error("Error al enviar mensaje al bot:", error);
+        res.status(500).json({ success: false, message: "Error interno del servidor." });
+    }
+});
+
+
 // --- LÓGICA DEL BOT CON GRAMMY ---
 
 const bot = new Bot(Deno.env.get("BOT_TOKEN"));

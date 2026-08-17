@@ -6,36 +6,15 @@
     <title>Mini App Interactiva</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--tg-theme-bg-color, #17212b);
-            color: var(--tg-theme-text-color, #ffffff);
-            padding: 20px;
-            margin: 0;
-        }
-        .card {
-            background-color: var(--tg-theme-secondary-bg-color, #232e3c);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
+        body { font-family: -apple-system, sans-serif; background-color: var(--tg-theme-bg-color, #17212b); color: var(--tg-theme-text-color, #ffffff); padding: 20px; margin: 0; }
+        .card { background-color: var(--tg-theme-secondary-bg-color, #232e3c); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
         h1 { font-size: 1.5rem; margin-top: 0; }
-        button {
-            background-color: var(--tg-theme-button-color, #3390ec);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            border: none;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            width: 100%;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: opacity 0.2s;
-        }
-        button:active { opacity: 0.8; }
+        button { background-color: var(--tg-theme-button-color, #3390ec); color: var(--tg-theme-button-text-color, #ffffff); border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; width: 100%; cursor: pointer; margin-top: 10px; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
         .danger { background-color: #ff4d4f; }
-        #status-text { font-weight: bold; color: #4caf50; }
+        #status-text { font-weight: bold; margin-top: 10px; }
+        .success { color: #4caf50; }
+        .error { color: #ff4d4f; }
     </style>
 </head>
 <body>
@@ -43,69 +22,74 @@
     <h1>Dashboard 📊</h1>
 
     <div class="card">
-        <p id="user-info">Cargando Usuario...</p>
+        <p id="user-info">Cargando usuario...</p>
     </div>
 
     <div class="card">
-        <h3>1. Consumir Backend (Express)</h3>
-        <p>Obtiene datos desde la API interna de Express.</p>
-        <button id="fetchDataBtn">Cargar Configuración</button>
-        <p id="api-response" style="font-size: 0.9rem; color: #ccc;">Esperando...</p>
-    </div>
-
-    <div class="card">
-        <h3>2. Enviar datos al Bot (GrammY)</h3>
-        <p>Simula una acción que el bot procesará directamente en el chat.</p>
-        <button id="sendToBotBtn">🛒 Comprar "Curso Dev"</button>
+        <h3>Comprar Producto</h3>
+        <p>Al hacer clic, la app consultará al backend y el bot te enviará un mensaje.</p>
+        <button id="buyBtn">🛒 Comprar "Curso Dev" ($49.99)</button>
+        <p id="status-text"></p>
     </div>
 
     <button class="danger" id="closeBtn">Cerrar App</button>
 
     <script>
-        // Inicializar Telegram WebApp
         const tg = window.Telegram.WebApp;
         tg.expand();
         tg.ready();
 
-        // Mostrar información del usuario
+        // Obtener el ID del usuario (Vital para que el bot sepa a quién responder)
         const user = tg.initDataUnsafe?.user;
         if (user) {
-            document.getElementById('user-info').innerText = `👋 Hola, ${user.first_name}!`;
+            document.getElementById('user-info').innerText = `👋 Hola, ${user.first_name}! (ID: ${user.id})`;
         } else {
-            document.getElementById('user-info').innerText = "Usuario no detectado (¿Abriste fuera de Telegram?).";
+            document.getElementById('user-info').innerText = "Usuario no detectado.";
         }
 
-        // 1. Interacción con Express (GET)
-        document.getElementById('fetchDataBtn').addEventListener('click', async () => {
+        // Lógica de compra asíncrona
+        document.getElementById('buyBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('buyBtn');
+            const statusText = document.getElementById('status-text');
+
+            btn.disabled = true;
+            btn.innerText = "Procesando...";
+            statusText.innerText = "";
+            statusText.className = "";
+
             try {
-                const res = await fetch('/api/config');
-                const data = await res.json();
-                document.getElementById('api-response').innerHTML = `
-                    <strong>Respuesta del Backend:</strong><br>
-                    Versión: ${data.version}<br>
-                    Características: ${data.features.join(', ')}
-                `;
+                // Hacemos la petición a nuestro backend de Express
+                const response = await fetch('/api/buy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: user.id, // Le decimos al backend quién soy yo
+                        item: "Curso Dev",
+                        price: 49.99
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    statusText.innerText = "✅ ¡Éxito! Revisa el bot en segundo plano.";
+                    statusText.classList.add('success');
+                    // Opcional: Vibración de éxito en móviles
+                    tg.HapticFeedback.notificationOccurred('success');
+                } else {
+                    throw new Error(data.message);
+                }
             } catch (error) {
-                document.getElementById('api-response').innerText = "Error al obtener datos.";
+                statusText.innerText = "❌ Error: " + error.message;
+                statusText.classList.add('error');
+                tg.HapticFeedback.notificationOccurred('error');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = '🛒 Comprar "Curso Dev" ($49.99)';
             }
         });
 
-        // 2. Interacción con GrammY (Envío de datos al Bot)
-        // NOTA: tg.sendData() cierra la Mini App inmediatamente y envía el mensaje al bot.
-        document.getElementById('sendToBotBtn').addEventListener('click', () => {
-            const payload = {
-                action: "buy",
-                item: "Curso Dev",
-                price: 49.99
-            };
-            // Enviamos los datos al bot. Esto disparará el evento 'message:web_app_data' en el backend.
-            tg.sendData(JSON.stringify(payload));
-        });
-
-        // Cerrar la App
-        document.getElementById('closeBtn').addEventListener('click', () => {
-            tg.close();
-        });
+        document.getElementById('closeBtn').addEventListener('click', () => tg.close());
     </script>
 </body>
 </html>
