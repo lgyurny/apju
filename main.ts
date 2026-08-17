@@ -1,4 +1,4 @@
-import TelegramBot from 'node-telegram-bot-api';
+import Bot from 'node-telegram-bot-api';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
