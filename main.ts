@@ -67,6 +67,10 @@ if (token === 'YOUR_TELEGRAM_BOT_TOKEN' || !token) {
             }
         });
 
+        //Comando /help
+        bot.command("help", (ctx) => ctx.reply("Hola! Este es la ayuda."));
+
+
         // También podemos enviarlo como un botón del teclado (Reply Keyboard)
         /*
         bot.sendMessage(chatId, "O usa este botón del teclado:", {
@@ -103,3 +107,5 @@ if (token === 'YOUR_TELEGRAM_BOT_TOKEN' || !token) {
         }
     });
 }
+
+await run(bot);
