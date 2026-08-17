@@ -1,111 +1,113 @@
-import Bot from 'node-telegram-bot-api';
+import dotenv from 'dotenv';
+import { Bot, InlineKeyboard } from 'grammy';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Obtener __dirname en un entorno de módulos ES
+// Configuración para usar __dirname en ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ==========================================
-// 1. Configuración de Variables de Entorno
-// ==========================================
-//const token = process.env.TELEGRAM_BOT_TOKEN || 'YOUR_TELEGRAM_BOT_TOKEN'; // Opcional, pero no recomendado en prod sin .env
-const token = Deno.env.get("BOT_TOKEN"); // <-- put your bot token between the ""
-const port = process.env.PORT || 3000;
-// WEBAPP_URL es la URL pública donde está alojada tu app (ej. https://tu-ngrok.ngrok-free.app o en producción).
-// Si no se define, se usará una URL temporal por consola.
-const webAppUrl = process.env.WEBAPP_URL || `http://localhost:${port}`;
+dotenv.config();
 
-// ==========================================
-// 2. Configuración del Servidor Express
-// ==========================================
+// 1. Inicializar Express
 const app = express();
+const PORT = process.env.PORT || 3000;
 
-// Servir archivos estáticos de la carpeta "public"
+// Middlewares para parsear JSON y servir archivos estáticos
+app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json()); // Para parsear JSON en el body
 
-// Endpoint raíz por si se visita directamente
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+// --- ENDPOINTS DE LA MINI APP (API) ---
 
-// Iniciar servidor Express
-app.listen(port, () => {
-    console.log(`🚀 Servidor Express escuchando en el puerto ${port}`);
-    console.log(`🌐 Aplicación Web disponible en: ${webAppUrl}`);
-});
-
-// ==========================================
-// 3. Configuración del Bot de Telegram
-// ==========================================
-
-// Si no hay token en el .env, avisamos, pero no detenemos para que al menos el frontend sirva.
-if (token === 'YOUR_TELEGRAM_BOT_TOKEN' || !token) {
-    console.warn("⚠️ ADVERTENCIA: No se ha proporcionado un TELEGRAM_BOT_TOKEN válido en el archivo .env.");
-    console.warn("El bot de Telegram no se iniciará, pero el servidor frontend está en funcionamiento.");
-} else {
-    // Inicializar el bot en modo polling
-    const bot = new Bot(token, { polling: true });
-
-    console.log("🤖 Bot de Telegram iniciado en modo polling.");
-
-    // Manejar el comando /start
-    bot.onText(/\/start/, (msg) => {
-        const chatId = msg.chat.id;
-
-        // Enviar un mensaje con un botón inline para abrir la Mini App
-        bot.sendMessage(chatId, "¡Hola! Bienvenido a la Mini App de prueba. Haz clic en el botón de abajo para abrirla.", {
-            reply_markup: {
-                inline_keyboard: [
-                    [{
-                        text: "Abrir Mini App 🚀",
-                        web_app: { url: webAppUrl }
-                    }]
-                ]
-            }
-        });
-
-        //Comando /help
-        bot.command("help", (ctx) => ctx.reply("Hola! Este es la ayuda."));
-
-
-        // También podemos enviarlo como un botón del teclado (Reply Keyboard)
-        /*
-        bot.sendMessage(chatId, "O usa este botón del teclado:", {
-            reply_markup: {
-                keyboard: [
-                    [{
-                        text: "Abrir Web App (Teclado)",
-                        web_app: { url: webAppUrl }
-                    }]
-                ],
-                resize_keyboard: true
-            }
-        });
-        */
+// Endpoint para obtener configuraciones desde el backend
+app.get('/api/config', (req, res) => {
+    res.json({
+        theme: "dark",
+        features: ["chat", "wallet", "settings"],
+        version: "1.0.0"
     });
+});
 
-    // Manejar datos recibidos desde la Web App (Cuando se usa tg.sendData en un botón del teclado regular, NO inline)
-    bot.on('message', async (msg) => {
-        // Verificar si el mensaje contiene datos de una web app
-        if (msg.web_app_data) {
-            try {
-                const data = JSON.parse(msg.web_app_data.data);
-                if (data.action === 'counter_result') {
-                    await bot.sendMessage(
-                        msg.chat.id,
-                        `¡Datos recibidos desde la Mini App!\nTu contador final fue: *${data.finalCount}*`,
-                        { parse_mode: 'Markdown' }
-                    );
-                }
-            } catch (e) {
-                console.error("Error al parsear datos de la Web App:", e);
-                bot.sendMessage(msg.chat.id, "Hubo un error al procesar los datos de la app.");
-            }
+// Endpoint para procesar formularios o datos desde la Mini App
+app.post('/api/submit', (req, res) => {
+    const { name, feedback } = req.body;
+    console.log("📦 Datos recibidos de la Mini App:", { name, feedback });
+    res.json({ success: true, message: `Gracias por tu feedback, ${name}!` });
+});
+
+// --- LÓGICA DEL BOT CON GRAMMY ---
+
+const bot = new Bot(Deno.env.get("BOT_TOKEN"));
+
+// Comando /start
+bot.command('start', async (ctx) => {
+    const keyboard = new InlineKeyboard().webApp(
+        "🚀 Abrir Mini App",
+        process.env.WEBAPP_URL
+    );
+    await ctx.reply(
+        "¡Bienvenido! Soy un bot avanzado con una Mini App integrada.\nUsa /help para ver mis comandos.",
+        { reply_markup: keyboard }
+    );
+});
+
+// Comando /help
+bot.command('help', async (ctx) => {
+    const text = `
+📚 *Comandos disponibles:*
+/start - Iniciar el bot y abrir la app
+/menu - Mostrar el menú principal
+/config - Ver configuración actual de la app
+/help - Mostrar esta ayuda
+    `;
+    await ctx.reply(text, { parse_mode: "Markdown" });
+});
+
+// Comando /menu
+bot.command('menu', async (ctx) => {
+    const keyboard = new InlineKeyboard().webApp(
+        "🛒 Ver Catálogo de Productos",
+        `${process.env.WEBAPP_URL}?view=catalog`
+    );
+    await ctx.reply("Selecciona una opción del menú:", { reply_markup: keyboard });
+});
+
+// Comando /config
+bot.command('config', async (ctx) => {
+    await ctx.reply("⚙️ Tu configuración actual es:\n- Tema: Oscuro\n- Notificaciones: Activadas");
+});
+
+// Escuchar datos enviados DESDE la Mini App hacia el Bot (usando tg.sendData())
+bot.on('message:web_app_data', async (ctx) => {
+    const dataString = ctx.message.web_app_data.data;
+    try {
+        const data = JSON.parse(dataString);
+        if (data.action === 'buy') {
+            await ctx.reply(`✅ ¡Compra realizada! Has adquirido: *${data.item}*.`, { parse_mode: "Markdown" });
+        } else {
+            await ctx.reply(`📩 Recibí el siguiente dato de la app: ${dataString}`);
         }
-    });
-}
+    } catch (error) {
+        await ctx.reply(`📩 Dato recibido: ${dataString}`);
+    }
+});
 
-await run(bot);
+// Configurar el botón de menú persistente (al lado del chat)
+bot.api.setChatMenuButton({
+    menu_button: {
+        type: "web_app",
+        text: "Abrir App",
+        web_app: { url: process.env.WEBAPP_URL }
+    }
+}).catch(err => console.error("Error configurando menú:", err));
+
+// Iniciar Bot
+bot.start({
+    onStart: () => console.log("🤖 Bot de Telegram iniciado correctamente...")
+});
+
+// Iniciar Servidor Express
+app.listen(PORT, () => {
+    console.log(`🌐 Servidor web corriendo en http://localhost:${PORT}`);
+});
