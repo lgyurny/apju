@@ -1,138 +1,76 @@
+// ⚠️ Debe ser el PRIMER import para que las variables de entorno
+// estén disponibles cuando se evalúen los demás módulos (bot.js usa BOT_TOKEN)
 import dotenv from 'dotenv';
-import { Bot, InlineKeyboard } from 'grammy';
-import express from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-// Configuración para usar __dirname en ES Modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
+import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
+import { webhookCallback } from "grammy";
+import { bot } from "./src/bot.ts";
+import apiRouter from "./src/api.ts";
 dotenv.config();
 
-// 1. Inicializar Express
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middlewares para parsear JSON y servir archivos estáticos
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+// Ruta "secreta" del webhook: difícil de adivinar para terceros
+const WEBHOOK_PATH = `/telegram-webhook/${process.env.WEBHOOK_SECRET}`;
 
-// --- ENDPOINTS DE LA MINI APP (API) ---
+// --- Middlewares base ---
+app.use(express.json()); // GrammY reutiliza el body ya parseado ✅
+app.use(express.static(path.join(__dirname, "public")));
 
-// Endpoint para obtener configuraciones desde el backend
-app.get('/api/config', (req, res) => {
-    res.json({
-        theme: "dark",
-        features: ["chat", "wallet", "settings"],
-        version: "1.0.0"
+// --- API de la Mini App ---
+app.use("/api", apiRouter);
+
+// --- Health check (útil para monitoreo y para verificar que el server vive) ---
+app.get("/health", (req, res) => res.json({ status: "ok" }));
+
+// --- WEBHOOK DE TELEGRAM ---
+// webhookCallback convierte al bot en middleware de Express.
+// El secretToken valida el header "X-Telegram-Bot-Api-Secret-Token"
+// que Telegram envía en cada petición: si no coincide, responde 401.
+app.use(WEBHOOK_PATH, webhookCallback(bot, "express", { secretToken: process.env.WEBHOOK_SECRET }));
+
+// --- Arranque ---
+async function main() {
+    // Cachea la info del bot (getMe) y valida el token al inicio.
+    // En modo webhook esto NO ocurre automáticamente.
+    await bot.init();
+
+    // Le decimos a Telegram dónde enviar los updates
+    const fullWebhookUrl = `${process.env.WEBAPP_URL}${WEBHOOK_PATH}`;
+    await bot.api.setWebhook(fullWebhookUrl, {
+        secret_token: process.env.WEBHOOK_SECRET,   // Telegram lo enviará en cada request
+        drop_pending_updates: true,                  // Descarta updates viejos acumulados
     });
-});
+    console.log(`🔗 Webhook configurado en: ${fullWebhookUrl}`);
 
-// Endpoint para procesar formularios o datos desde la Mini App
-app.post('/api/submit', (req, res) => {
-    const { name, feedback } = req.body;
-    console.log("📦 Datos recibidos de la Mini App:", { name, feedback });
-    res.json({ success: true, message: `Gracias por tu feedback, ${name}!` });
-});
+    // Botón de menú persistente y lista de comandos
+    await bot.api.setChatMenuButton({
+        menu_button: {
+            type: "web_app",
+            text: "Abrir App",
+            web_app: { url: process.env.WEBAPP_URL },
+        },
+    });
 
-// NUEVO ENDPOINT: Recibe datos de la app y notifica al bot
-app.post('/api/buy', async (req, res) => {
-    const { userId, item, price } = req.body;
+    await bot.api.setMyCommands([
+        { command: "start", description: "Iniciar el bot" },
+        { command: "help", description: "Ver comandos disponibles" },
+        { command: "menu", description: "Abrir el menú principal" },
+        { command: "config", description: "Ver configuración" },
+        { command: "status", description: "Estado del webhook" },
+    ]);
 
-    if (!userId) {
-        return res.status(400).json({ success: false, message: "Falta el ID del usuario" });
-    }
+    app.listen(PORT, () => {
+        console.log(`🌐 Servidor en http://localhost:${PORT}`);
+        console.log(`🤖 Bot en modo webhook esperando updates...`);
+    });
+}
 
-    try {
-        // Usamos la instancia del bot de GrammY para enviar un mensaje directo al usuario
-        await bot.api.sendMessage(
-            userId,
-            `✅ ¡Compra procesada con éxito!\n\n📦 Producto: *${item}*\n💰 Precio: $${price}\n\nGracias por tu compra.`,
-            { parse_mode: "Markdown" }
-        );
-
-        // Respondemos a la Mini App para que muestre un mensaje de éxito
-        res.json({ success: true, message: "Compra realizada y bot notificado." });
-    } catch (error) {
-        console.error("Error al enviar mensaje al bot:", error);
-        res.status(500).json({ success: false, message: "Error interno del servidor." });
-    }
-});
-
-
-// --- LÓGICA DEL BOT CON GRAMMY ---
-
-const bot = new Bot(Deno.env.get("BOT_TOKEN"));
-
-// Comando /start
-bot.command('start', async (ctx) => {
-    const keyboard = new InlineKeyboard().webApp(
-        "🚀 Abrir Mini App",
-        Deno.env.get("WEBAPP_URL")
-    );
-    await ctx.reply(
-        "¡Bienvenido! Soy un bot avanzado con una Mini App integrada.\nUsa /help para ver mis comandos.",
-        { reply_markup: keyboard }
-    );
-});
-
-// Comando /help
-bot.command('help', async (ctx) => {
-    const text = `
-📚 *Comandos disponibles:*
-/start - Iniciar el bot y abrir la app
-/menu - Mostrar el menú principal
-/config - Ver configuración actual de la app
-/help - Mostrar esta ayuda
-    `;
-    await ctx.reply(text, { parse_mode: "Markdown" });
-});
-
-// Comando /menu
-bot.command('menu', async (ctx) => {
-    const keyboard = new InlineKeyboard().webApp(
-        "🛒 Ver Catálogo de Productos",
-        `${Deno.env.get("WEBAPP_URL")}?view=catalog`
-    );
-    await ctx.reply("Selecciona una opción del menú:", { reply_markup: keyboard });
-});
-
-// Comando /config
-bot.command('config', async (ctx) => {
-    await ctx.reply("⚙️ Tu configuración actual es:\n- Tema: Oscuro\n- Notificaciones: Activadas");
-});
-
-// Escuchar datos enviados DESDE la Mini App hacia el Bot (usando tg.sendData())
-bot.on('message:web_app_data', async (ctx) => {
-    const dataString = ctx.message.web_app_data.data;
-    try {
-        const data = JSON.parse(dataString);
-        if (data.action === 'buy') {
-            await ctx.reply(`✅ ¡Compra realizada! Has adquirido: *${data.item}*.`, { parse_mode: "Markdown" });
-        } else {
-            await ctx.reply(`📩 Recibí el siguiente dato de la app: ${dataString}`);
-        }
-    } catch (error) {
-        await ctx.reply(`📩 Dato recibido: ${dataString}`);
-    }
-});
-
-// Configurar el botón de menú persistente (al lado del chat)
-bot.api.setChatMenuButton({
-    menu_button: {
-        type: "web_app",
-        text: "Abrir App",
-        web_app: { url: Deno.env.get("WEBAPP_URL") }
-    }
-}).catch(err => console.error("Error configurando menú:", err));
-
-// Iniciar Bot
-bot.start({
-    onStart: () => console.log("🤖 Bot de Telegram iniciado correctamente...")
-});
-
-// Iniciar Servidor Express
-app.listen(PORT, () => {
-    console.log(`🌐 Servidor web corriendo en http://localhost:${PORT}`);
+main().catch((err) => {
+    console.error("💥 Error al iniciar la aplicación:", err);
+    process.exit(1);
 });
