@@ -1,5 +1,5 @@
 import { Bot, InlineKeyboard } from "grammy";
-import { autoRetry } from "grammyjs/auto-retry";
+import { autoRetry } from "npm:@grammyjs/auto-retry";
 
 // Instancia única del bot, compartida por toda la app
 export const bot = new Bot(process.env.BOT_TOKEN);
