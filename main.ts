@@ -2,8 +2,8 @@ import express from "express";
 import { webhookCallback } from "grammy";
 import { fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
-import { bot } from "./bot.ts";
-import apiRouter from "./api.ts";
+import { bot } from "./src/bot.ts";
+import apiRouter from "./src/api.ts";
 
 // --- Configuración ---
 const WEBAPP_URL = (Deno.env.get("WEBAPP_URL") ?? "").replace(/\/+$/, "");
