@@ -6,7 +6,7 @@ export const bot = new Bot(process.env.BOT_TOKEN);
 
 // Si Telegram responde 429, espera el retry_aftery reintenta hasta 3 intentos por llamada
 // Se registra AQUI para que tanto main.ts como setup.ts lo hereden
-bot.api.config.use(autoRetry);
+bot.api.config.use(autoRetry());
 
 // Middleware de logging: verás cada update llegando por el webhook
 bot.use(async (ctx, next) => {
