@@ -1,4 +1,5 @@
 import express from "express";
+import path from "path";
 import { webhookCallback } from "grammy";
 import { fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
@@ -18,7 +19,8 @@ const WEBHOOK_PATH = `/telegram-webhook/${WEBHOOK_SECRET}`;
 const FULL_WEBHOOK_URL = `${WEBAPP_URL}${WEBHOOK_PATH}`;
 
 // --- Servidor Express ---
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+//const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 
 //app.use(express.json());
