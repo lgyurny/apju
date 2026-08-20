@@ -20,11 +20,7 @@ const FULL_WEBHOOK_URL = `${WEBAPP_URL}${WEBHOOK_PATH}`;
 
 // --- Servidor Express ---
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-//const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
-
-//app.use(express.json());
-//app.use(express.static(join(__dirname, "..", "public"))); // ajusta si mueves carpetas
 
 // --- Middlewares base ---
 app.use(express.json()); // GrammY reutiliza el body ya parseado ✅
@@ -32,6 +28,8 @@ app.use(express.static(path.join(__dirname, "public")));
 
 app.use("/api", apiRouter);
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
+
+// Ruta "secreta" del webhook: difícil de adivinar para terceros
 app.use(WEBHOOK_PATH, webhookCallback(bot, "express", { secretToken: WEBHOOK_SECRET }));
 
 // --- CAPA 2: bootstrap idempotente y SIN crash loop ---
